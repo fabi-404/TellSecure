@@ -1,0 +1,5 @@
+{
+  "name": "SilentDrop",
+  "description": "An anonymous, privacy-first contact platform that uses AI to analyze, redact, and categorize feedback for admins without compromising sender identity.",
+  "requestFramePermissions": []
+}
