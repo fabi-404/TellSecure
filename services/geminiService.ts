@@ -10,7 +10,7 @@ const modelId = "gemini-3-flash-preview";
 const submissionSchema = {
   type: Type.OBJECT,
   properties: {
-    submission_id: { type: Type.STRING, description: "Generate a short UUID or unique string" },
+    submission_id: { type: Type.STRING, description: "Generate a unique alphanumeric string exactly 10 characters long" },
     content: {
       type: Type.OBJECT,
       properties: {
@@ -30,7 +30,7 @@ const submissionSchema = {
       properties: {
         intent: { 
           type: Type.STRING, 
-          enum: ["Bug Report", "Feature Request", "General Praise", "Complaint", "Other", "General"] 
+          enum: ["Fraud & Corruption", "Harassment & Abuse", "Safety Violation", "Data Security", "Compliance Issue", "Unethical Conduct", "Other"] 
         },
         priority: { 
           type: Type.STRING, 
@@ -38,7 +38,7 @@ const submissionSchema = {
         },
         sentiment_score: { 
           type: Type.NUMBER, 
-          description: "Float between -1.0 (negative) and 1.0 (positive)" 
+          description: "Float between -1.0 (highly distressed) and 1.0 (neutral/calm)" 
         },
         requires_developer_intervention: { type: Type.BOOLEAN }
       },
@@ -50,17 +50,24 @@ const submissionSchema = {
 };
 
 const SYSTEM_INSTRUCTION = `
-You are a Privacy-First Backend Logic Assistant. Your task is to process incoming anonymous contact form submissions into structured data for an admin dashboard.
+You are a Privacy-First Backend Logic Assistant for a Whistleblower Platform. Your task is to process incoming anonymous reports into structured data for an admin dashboard.
 
 Constraints:
 1. Anonymity: Do not attempt to extract names, phone numbers, or personal emails. If a user voluntarily provides them, redact them in the "summary" (replace with [REDACTED]) but keep them in the "original_message" for record-keeping.
-2. Focus: Concentrate on the intent and urgency of the feedback rather than the identity of the sender.
-3. Attachments: If an image or PDF is provided, analyze its visual content in context with the text. Describe relevant details in the "original_message" or "summary" if it adds context (e.g., "User attached a screenshot of a 404 error").
+2. Focus: Concentrate on the severity and nature of the misconduct rather than the identity of the sender.
+3. Attachments: If an image or PDF is provided, analyze its visual content in context with the text. Describe relevant details in the "original_message" or "summary" if it adds context (e.g., "User attached a photo of unsafe working conditions").
 
 Logic Rules:
-- If the message mentions "security," "exploit," or "leak," set priority to Urgent.
-- Categorize vague messages (e.g., "it doesn't work") as Low priority and flag for "General" intent.
-- Use the sentiment_score to help admins sort by the most frustrated users first (-1.0 is very angry, 1.0 is very happy).
+- If the message mentions "imminent danger", "violence", "major theft", or "legal violation", set priority to Urgent.
+- Categorize reports into:
+  - 'Fraud & Corruption': Theft, embezzlement, bribery, financial manipulation.
+  - 'Harassment & Abuse': Bullying, sexual harassment, discrimination, verbal abuse.
+  - 'Safety Violation': Unsafe working conditions, ignored maintenance, health hazards.
+  - 'Data Security': Data leaks, hacking, mishandling of private info.
+  - 'Compliance Issue': Breaking laws, regulations, or company policies.
+  - 'Unethical Conduct': Conflicts of interest, nepotism, reputational damage.
+  - 'Other': Anything else.
+- Use the sentiment_score to gauge the emotional distress of the reporter (-1.0 is highly distressed/fearful/angry, 1.0 is calm/neutral).
 `;
 
 interface Attachment {
@@ -101,6 +108,9 @@ export const processSubmission = async (message: string, attachment?: Attachment
     const timestamp = new Date().toISOString();
     data.timestamp = timestamp;
     
+    // Enforce 10-character limit on submission_id by overwriting with a safe random string
+    data.submission_id = Math.random().toString(36).slice(2, 12).toUpperCase().padEnd(10, 'X').slice(0, 10);
+
     // Generate a simple 8-character random password for the user
     data.access_password = Math.random().toString(36).slice(-8).toUpperCase();
 

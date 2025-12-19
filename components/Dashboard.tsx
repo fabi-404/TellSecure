@@ -11,7 +11,7 @@ interface DashboardProps {
 
 export const Dashboard: React.FC<DashboardProps> = ({ submissions, onReply }) => {
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [filter, setFilter] = useState<'ALL' | 'URGENT' | 'HIGH' | 'BUG'>('ALL');
+  const [filter, setFilter] = useState<'ALL' | 'URGENT' | 'HIGH' | 'SAFETY'>('ALL');
   const [replyText, setReplyText] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -31,7 +31,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ submissions, onReply }) =>
     return submissions.filter(s => {
       if (filter === 'URGENT') return s.analysis.priority === 'Urgent';
       if (filter === 'HIGH') return s.analysis.priority === 'High' || s.analysis.priority === 'Urgent';
-      if (filter === 'BUG') return s.analysis.intent === 'Bug Report';
+      if (filter === 'SAFETY') return s.analysis.intent === 'Safety Violation';
       return true;
     }).sort((a, b) => new Date(b.timestamp || '').getTime() - new Date(a.timestamp || '').getTime());
   }, [submissions, filter]);
@@ -88,10 +88,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ submissions, onReply }) =>
               Urgent
             </button>
              <button 
-              onClick={() => setFilter('BUG')}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${filter === 'BUG' ? 'bg-indigo-600 text-white' : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'}`}
+              onClick={() => setFilter('SAFETY')}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${filter === 'SAFETY' ? 'bg-indigo-600 text-white' : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'}`}
             >
-              Bugs
+              Safety
             </button>
           </div>
           <div className="relative">

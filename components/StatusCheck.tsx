@@ -82,8 +82,9 @@ export const StatusCheck: React.FC<StatusCheckProps> = ({ submissions, onReply }
                     type="text"
                     value={caseId}
                     onChange={(e) => setCaseId(e.target.value)}
+                    maxLength={10}
                     className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
-                    placeholder="e.g. 550e8400..."
+                    placeholder="e.g. 550E8400A1"
                   />
                 </div>
               </div>

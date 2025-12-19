@@ -6,7 +6,7 @@ export interface SubmissionContent {
 }
 
 export interface SubmissionAnalysis {
-  intent: 'Bug Report' | 'Feature Request' | 'General Praise' | 'Complaint' | 'Other' | 'General';
+  intent: 'Fraud & Corruption' | 'Harassment & Abuse' | 'Safety Violation' | 'Data Security' | 'Compliance Issue' | 'Unethical Conduct' | 'Other';
   priority: 'Low' | 'Medium' | 'High' | 'Urgent';
   sentiment_score: number;
   requires_developer_intervention: boolean;
