@@ -1,13 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { ContactForm } from './components/ContactForm';
-import { Dashboard } from './components/Dashboard';
-import { LoginScreen } from './components/LoginScreen';
-import { StatusCheck } from './components/StatusCheck';
-import { SubmissionResponse, View, CaseStatus } from './types';
-import { LayoutGrid, MessageSquarePlus, LogOut, SearchCheck, Loader2, DatabaseZap, Shield } from 'lucide-react';
-import { supabase } from './lib/supabase';
+'use client';
 
-const App: React.FC = () => {
+import React, { useState, useEffect } from 'react';
+import { ContactForm } from '../components/ContactForm';
+import { Dashboard } from '../components/Dashboard';
+import { LoginScreen } from '../components/LoginScreen';
+import { StatusCheck } from '../components/StatusCheck';
+import { SubmissionResponse, View, CaseStatus } from '../types';
+import { LayoutGrid, MessageSquarePlus, LogOut, SearchCheck, Loader2, DatabaseZap, Shield } from 'lucide-react';
+import { supabase } from '../lib/supabase';
+
+export default function Home() {
   const [view, setView] = useState<View>(View.FORM);
   const [submissions, setSubmissions] = useState<SubmissionResponse[]>([]);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -361,6 +363,4 @@ const App: React.FC = () => {
       </main>
     </div>
   );
-};
-
-export default App;
+}

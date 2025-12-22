@@ -82,13 +82,13 @@ export const ContactForm: React.FC<ContactFormProps> = ({ onSubmissionComplete }
 
   return (
     <div className="max-w-2xl mx-auto w-full p-6">
-      <div className="bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden">
+      <div className="bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden">
         <div className="bg-slate-900 p-8 text-white">
           <div className="flex items-center space-x-3 mb-4">
             <ShieldCheck className="w-8 h-8 text-emerald-400" />
-            <h2 className="text-2xl font-bold">Secure Drop</h2>
+            <h2 className="text-2xl font-bold tracking-tight">Secure Drop</h2>
           </div>
-          <p className="text-slate-300">
+          <p className="text-slate-300 leading-relaxed">
             Send anonymous feedback, bug reports, or concerns. 
             Our AI strips identifiable metadata before it reaches the admin team.
           </p>
@@ -102,8 +102,8 @@ export const ContactForm: React.FC<ContactFormProps> = ({ onSubmissionComplete }
               </div>
               
               <div>
-                <h3 className="text-xl font-bold text-emerald-800">Transmission Successful</h3>
-                <p className="text-emerald-700/80 mt-1">Your message has been anonymized and queued.</p>
+                <h3 className="text-xl font-bold text-emerald-900">Transmission Successful</h3>
+                <p className="text-emerald-700 mt-1">Your message has been anonymized and queued.</p>
               </div>
 
               <div className="w-full bg-white p-4 rounded-lg border border-emerald-200 shadow-sm text-left mt-4">
@@ -114,34 +114,34 @@ export const ContactForm: React.FC<ContactFormProps> = ({ onSubmissionComplete }
                 
                 <div className="space-y-3">
                   <div>
-                    <span className="text-xs text-slate-500">Case ID</span>
+                    <span className="text-xs text-slate-500 uppercase font-semibold tracking-wide">Case ID</span>
                     <div className="flex justify-between items-center bg-slate-50 p-2 rounded border border-slate-200 mt-1">
-                      <code className="font-mono text-slate-800 font-bold">{successData.submission_id}</code>
-                      <button onClick={() => copyToClipboard(successData.submission_id)} className="text-slate-400 hover:text-indigo-600">
+                      <code className="font-mono text-slate-900 font-bold">{successData.submission_id}</code>
+                      <button onClick={() => copyToClipboard(successData.submission_id)} className="text-slate-400 hover:text-emerald-600 transition-colors">
                         <Copy className="w-4 h-4" />
                       </button>
                     </div>
                   </div>
                   
                   <div>
-                    <span className="text-xs text-slate-500">Access Password</span>
+                    <span className="text-xs text-slate-500 uppercase font-semibold tracking-wide">Access Password</span>
                     <div className="flex justify-between items-center bg-slate-50 p-2 rounded border border-slate-200 mt-1">
-                      <code className="font-mono text-slate-800 font-bold">{successData.access_password}</code>
-                      <button onClick={() => copyToClipboard(successData.access_password || '')} className="text-slate-400 hover:text-indigo-600">
+                      <code className="font-mono text-slate-900 font-bold">{successData.access_password}</code>
+                      <button onClick={() => copyToClipboard(successData.access_password || '')} className="text-slate-400 hover:text-emerald-600 transition-colors">
                         <Copy className="w-4 h-4" />
                       </button>
                     </div>
                   </div>
                 </div>
                 
-                <p className="text-xs text-slate-500 mt-3 italic text-center">
+                <p className="text-xs text-slate-500 mt-4 italic text-center">
                   You need these credentials to check the status of your report later.
                 </p>
               </div>
 
               <button 
                 onClick={() => setSuccessData(null)}
-                className="mt-6 text-sm font-semibold text-emerald-700 bg-emerald-100 hover:bg-emerald-200 px-6 py-2 rounded-lg transition-colors"
+                className="mt-6 text-sm font-semibold text-emerald-700 bg-emerald-100 hover:bg-emerald-200 px-6 py-2 rounded-lg transition-colors border border-emerald-200"
               >
                 Start New Submission
               </button>
@@ -149,20 +149,20 @@ export const ContactForm: React.FC<ContactFormProps> = ({ onSubmissionComplete }
           ) : (
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
-                <label htmlFor="message" className="block text-sm font-medium text-slate-700 mb-2">
+                <label htmlFor="message" className="block text-sm font-semibold text-slate-900 mb-2">
                   Your Message
                 </label>
                 <div className="relative">
                   <textarea
                     id="message"
                     rows={6}
-                    className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all resize-none text-slate-800 placeholder:text-slate-400"
+                    className="w-full p-4 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all resize-none text-slate-900 placeholder:text-slate-400 shadow-sm"
                     placeholder="Describe your issue or feedback. Avoid including your name if you wish to remain 100% anonymous..."
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
                     disabled={isSubmitting}
                   />
-                  <div className="absolute bottom-3 right-3 text-xs text-slate-400 font-mono bg-white/50 px-2 py-1 rounded">
+                  <div className="absolute bottom-3 right-3 text-xs text-slate-400 font-mono bg-white/80 px-2 py-1 rounded">
                     {message.length} chars
                   </div>
                 </div>
@@ -183,25 +183,25 @@ export const ContactForm: React.FC<ContactFormProps> = ({ onSubmissionComplete }
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={isSubmitting}
-                    className="flex items-center space-x-2 text-sm text-slate-600 hover:text-indigo-600 hover:bg-slate-50 px-3 py-2 rounded-lg transition-colors border border-dashed border-slate-300 hover:border-indigo-300 w-full"
+                    className="flex items-center space-x-2 text-sm text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 hover:border-emerald-300 px-3 py-2.5 rounded-lg transition-colors border border-dashed border-slate-300 w-full justify-center group"
                   >
-                    <Paperclip className="w-4 h-4" />
+                    <Paperclip className="w-4 h-4 group-hover:text-emerald-600" />
                     <span>Attach Screenshot or PDF (optional)</span>
                   </button>
                 ) : (
-                  <div className="flex items-center justify-between p-3 bg-indigo-50 border border-indigo-100 rounded-lg">
+                  <div className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-lg">
                     <div className="flex items-center space-x-3 overflow-hidden">
                       {file.mimeType.includes('pdf') ? (
-                        <FileText className="w-5 h-5 text-indigo-500 flex-shrink-0" />
+                        <FileText className="w-5 h-5 text-slate-500 flex-shrink-0" />
                       ) : (
-                        <ImageIcon className="w-5 h-5 text-indigo-500 flex-shrink-0" />
+                        <ImageIcon className="w-5 h-5 text-slate-500 flex-shrink-0" />
                       )}
-                      <span className="text-sm text-indigo-900 font-medium truncate">{file.name}</span>
+                      <span className="text-sm text-slate-900 font-medium truncate">{file.name}</span>
                     </div>
                     <button
                       type="button"
                       onClick={clearFile}
-                      className="p-1 hover:bg-indigo-100 rounded-full text-indigo-400 hover:text-indigo-700 transition-colors"
+                      className="p-1 hover:bg-slate-200 rounded-full text-slate-400 hover:text-slate-700 transition-colors"
                       title="Remove file"
                     >
                       <X className="w-4 h-4" />
@@ -211,13 +211,13 @@ export const ContactForm: React.FC<ContactFormProps> = ({ onSubmissionComplete }
               </div>
 
               {error && (
-                <div className="flex items-center space-x-2 text-red-600 bg-red-50 p-3 rounded-lg text-sm">
+                <div className="flex items-center space-x-2 text-red-600 bg-red-50 p-3 rounded-lg text-sm border border-red-100">
                   <AlertCircle className="w-4 h-4" />
                   <span>{error}</span>
                 </div>
               )}
 
-              <div className="flex items-center justify-between pt-2">
+              <div className="flex items-center justify-between pt-4 border-t border-slate-100">
                 <p className="text-xs text-slate-400 flex items-center">
                   <ShieldCheck className="w-3 h-3 mr-1" />
                   End-to-end anonymity processing active
@@ -226,15 +226,15 @@ export const ContactForm: React.FC<ContactFormProps> = ({ onSubmissionComplete }
                   type="submit"
                   disabled={isSubmitting || (!message.trim() && !file)}
                   className={`
-                    flex items-center space-x-2 px-6 py-3 rounded-xl font-semibold text-white transition-all
+                    flex items-center space-x-2 px-6 py-2.5 rounded-lg font-semibold text-white transition-all
                     ${isSubmitting || (!message.trim() && !file)
-                      ? 'bg-slate-300 cursor-not-allowed' 
-                      : 'bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-200 hover:shadow-xl hover:shadow-indigo-300 transform hover:-translate-y-0.5'}
+                      ? 'bg-slate-200 text-slate-400 cursor-not-allowed' 
+                      : 'bg-emerald-600 hover:bg-emerald-700 shadow-sm hover:shadow-md'}
                   `}
                 >
                   {isSubmitting ? (
                     <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <Loader2 className="w-4 h-4 animate-spin" />
                       <span>Processing...</span>
                     </>
                   ) : (

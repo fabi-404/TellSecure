@@ -1,8 +1,13 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { SubmissionResponse } from "../types";
 
-// Initialize the client
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Initialize the client with Next.js support
+const apiKey = process.env.NEXT_PUBLIC_API_KEY || process.env.API_KEY;
+if (!apiKey) {
+    console.error("API_KEY is missing. Please set NEXT_PUBLIC_API_KEY in your environment.");
+}
+
+const ai = new GoogleGenAI({ apiKey: apiKey });
 
 const modelId = "gemini-3-flash-preview";
 
