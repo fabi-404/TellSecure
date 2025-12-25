@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Send, ShieldCheck, Loader2, AlertCircle, Paperclip, X, FileText, Image as ImageIcon, Copy, Key } from 'lucide-react';
 import { processSubmission } from '../services/geminiService';
 import { SubmissionResponse } from '../types';
+import { uploadFile } from '../lib/storage';
 
 interface ContactFormProps {
   onSubmissionComplete: (data: SubmissionResponse) => void;
@@ -11,6 +12,7 @@ interface AttachedFile {
   name: string;
   data: string; // Base64 without prefix
   mimeType: string;
+  fileObject: File;
 }
 
 export const ContactForm: React.FC<ContactFormProps> = ({ onSubmissionComplete }) => {
@@ -34,12 +36,12 @@ export const ContactForm: React.FC<ContactFormProps> = ({ onSubmissionComplete }
     const reader = new FileReader();
     reader.onload = () => {
       const result = reader.result as string;
-      // Extract base64 data and mime type
       const base64Data = result.split(',')[1];
       setFile({
         name: selectedFile.name,
         data: base64Data,
-        mimeType: selectedFile.type
+        mimeType: selectedFile.type,
+        fileObject: selectedFile
       });
       setError(null);
     };
@@ -60,9 +62,21 @@ export const ContactForm: React.FC<ContactFormProps> = ({ onSubmissionComplete }
     setError(null);
 
     try {
-      // Pass file data if it exists
+      // 1. Upload file if exists (using S3 Garage)
+      let attachmentUrl;
+      if (file) {
+         attachmentUrl = await uploadFile(file.fileObject);
+         // Append upload URL to message so admin can see it in "Original Message"
+         // (Privacy note: The AI summary strips PII, but we keep the link in the raw log)
+      }
+
+      // 2. Process with AI
+      const finalMessage = attachmentUrl 
+         ? `${message}\n\n[System: User attached file at ${attachmentUrl}]`
+         : message;
+         
       const attachment = file ? { data: file.data, mimeType: file.mimeType } : undefined;
-      const result = await processSubmission(message, attachment);
+      const result = await processSubmission(finalMessage, attachment);
       
       onSubmissionComplete(result);
       setSuccessData(result);
@@ -70,6 +84,7 @@ export const ContactForm: React.FC<ContactFormProps> = ({ onSubmissionComplete }
       clearFile();
       
     } catch (err) {
+      console.error(err);
       setError("Failed to process your message. Please try again.");
     } finally {
       setIsSubmitting(false);

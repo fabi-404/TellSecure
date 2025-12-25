@@ -1,12 +1,20 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, Lock, AlertCircle, CheckCircle2, Clock, MessageSquare, SendHorizontal, Loader2 } from 'lucide-react';
+import { Search, Lock, AlertCircle, CheckCircle2, Clock, MessageSquare, SendHorizontal, Loader2, Paperclip, X, FileText, Image as ImageIcon } from 'lucide-react';
 import { SubmissionResponse, CaseStatus } from '../types';
-import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
+import { uploadFile } from '../lib/storage';
 
 interface StatusCheckProps {
   submissions: SubmissionResponse[];
   onReply: (id: string, message: string) => void;
   tenantId: string | null;
+}
+
+interface AttachedFile {
+  name: string;
+  data: string;
+  mimeType: string;
+  fileObject: File;
 }
 
 export const StatusCheck: React.FC<StatusCheckProps> = ({ submissions, onReply, tenantId }) => {
@@ -17,6 +25,11 @@ export const StatusCheck: React.FC<StatusCheckProps> = ({ submissions, onReply, 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [replyText, setReplyText] = useState('');
+  
+  // File upload state
+  const [file, setFile] = useState<AttachedFile | null>(null);
+  const [isSending, setIsSending] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Determine which submission object to use: from props (cached) or fetched directly
@@ -33,14 +46,18 @@ export const StatusCheck: React.FC<StatusCheckProps> = ({ submissions, onReply, 
   const mapDbReportToSubmission = (report: any): SubmissionResponse => {
     let richData: any = {};
     try {
-      richData = JSON.parse(report.description || '{}');
+      richData = report.description; // Assume already parsed or object
+      if (typeof richData === 'string') richData = JSON.parse(richData);
     } catch (e) {
-      richData = { original_message: report.description, history: [] };
+      richData = { 
+        original_message: typeof report.description === 'string' ? report.description : '', 
+        history: [] 
+      };
     }
 
     return {
-      submission_id: report.report_key,
-      access_password: report.password_hash,
+      submission_id: report.reportKey,
+      access_password: report.passwordHash,
       content: {
         subject_line: richData.subject_line || 'Untitled Report',
         original_message: richData.original_message || '',
@@ -54,7 +71,7 @@ export const StatusCheck: React.FC<StatusCheckProps> = ({ submissions, onReply, 
         requires_developer_intervention: richData.requires_developer_intervention || false
       },
       admin_preview: richData.admin_preview || '',
-      timestamp: report.created_at,
+      timestamp: report.createdAt,
       status: report.status as CaseStatus,
       history: richData.history || []
     };
@@ -84,38 +101,15 @@ export const StatusCheck: React.FC<StatusCheckProps> = ({ submissions, onReply, 
       return;
     }
 
-    // 2. If not found locally, fetch directly from Supabase
+    // 2. If not found locally, fetch directly from API
     setIsLoading(true);
     try {
-      let query = supabase
-        .from('reports')
-        .select('*')
-        .eq('report_key', trimmedCaseId)
-        .eq('password_hash', trimmedPassword);
-      
-      // If we know the tenant ID, adding it might help with some RLS policies
-      if (tenantId) {
-        query = query.eq('tenant_id', tenantId);
-      }
+      const report = await api.reports.getByKey(trimmedCaseId, trimmedPassword);
 
-      const { data, error } = await query.single();
-
-      if (error) {
-        // IMPROVED ERROR LOGGING
-        console.error("Supabase Error:", JSON.stringify(error, null, 2));
-        
-        if (error.code === 'PGRST116') {
-          // No rows found. This could be invalid ID OR RLS blocking the view.
-          setError('Case not found. Please check your credentials.');
-        } else if (error.code === '42501') {
-           setError('Database permission denied. Admin: Check Supabase RLS policies.');
-        } else {
-          setError(`Database Error: ${error.message}`);
-        }
-      } else if (!data) {
-        setError('Invalid Case ID or Password.');
+      if (!report) {
+        setError('Case not found or invalid credentials.');
       } else {
-        const mapped = mapDbReportToSubmission(data);
+        const mapped = mapDbReportToSubmission(report);
         setFetchedSubmission(mapped);
         setActiveId(mapped.submission_id);
       }
@@ -127,10 +121,37 @@ export const StatusCheck: React.FC<StatusCheckProps> = ({ submissions, onReply, 
     }
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
+    if (!selectedFile) return;
+
+    if (selectedFile.size > 5 * 1024 * 1024) {
+      alert("File is too large. Max 5MB allowed.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      const base64Data = result.split(',')[1];
+      setFile({
+        name: selectedFile.name,
+        data: base64Data,
+        mimeType: selectedFile.type,
+        fileObject: selectedFile
+      });
+    };
+    reader.readAsDataURL(selectedFile);
+  };
+
+  const clearFile = () => {
+    setFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
   const updateRemoteHistory = async (sub: SubmissionResponse, newMessage: any) => {
     const updatedHistory = [...(sub.history || []), newMessage];
     
-    // Create updated rich data object
     const richData = {
       subject_line: sub.content.subject_line,
       original_message: sub.content.original_message,
@@ -142,55 +163,64 @@ export const StatusCheck: React.FC<StatusCheckProps> = ({ submissions, onReply, 
       history: updatedHistory
     };
 
-    const { error: updateError } = await supabase
-      .from('reports')
-      .update({
-        description: JSON.stringify(richData),
-        status: 'ACTION_REQUIRED'
-      })
-      .eq('report_key', sub.submission_id);
-    
-    if (updateError) {
-      console.error("Failed to update history:", updateError);
-      alert("Failed to send reply. Please try again.");
-      return null;
+    try {
+        await api.reports.update(sub.submission_id, {
+            description: richData,
+            status: 'ACTION_REQUIRED'
+        });
+        return updatedHistory;
+    } catch(err) {
+        console.error("Failed to update history:", err);
+        alert("Failed to send reply. Please try again.");
+        return null;
     }
-    
-    return updatedHistory;
   };
 
   const handleSendReply = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!activeId || !replyText.trim() || !activeSubmission) return;
+    if (!activeId || (!replyText.trim() && !file) || !activeSubmission) return;
 
-    const messageContent = replyText; // capture text before clearing
-    setReplyText(''); // clear input immediately
+    setIsSending(true);
 
-    // Check if we are using local prop or remote fetched data
-    const isLocal = submissions.some(s => s.submission_id === activeId);
+    try {
+      let messageContent = replyText;
+      
+      // Upload file if exists
+      if (file) {
+        const attachmentUrl = await uploadFile(file.fileObject);
+        messageContent = messageContent 
+          ? `${messageContent}\n\n[Attachment: ${attachmentUrl}]` 
+          : `[Attachment: ${attachmentUrl}]`;
+      }
 
-    if (isLocal) {
-      // Use the handler passed from parent if available locally
-      onReply(activeId, messageContent);
-    } else {
-      // Handle update internally for remotely fetched submissions
-      const newMessage = {
-        id: Math.random().toString(36).substr(2, 9),
-        sender: 'USER' as const,
-        message: messageContent,
-        timestamp: new Date().toISOString()
-      };
+      setReplyText('');
+      clearFile();
 
-      // Optimistic update
-      const updatedSubmission = {
-        ...activeSubmission,
-        history: [...activeSubmission.history, newMessage],
-        status: 'ACTION_REQUIRED' as CaseStatus
-      };
-      setFetchedSubmission(updatedSubmission);
+      const isLocal = submissions.some(s => s.submission_id === activeId);
 
-      // Persist to DB
-      await updateRemoteHistory(activeSubmission, newMessage);
+      if (isLocal) {
+        onReply(activeId, messageContent);
+      } else {
+        const newMessage = {
+          id: Math.random().toString(36).substr(2, 9),
+          sender: 'USER' as const,
+          message: messageContent,
+          timestamp: new Date().toISOString()
+        };
+
+        const updatedSubmission = {
+          ...activeSubmission,
+          history: [...activeSubmission.history, newMessage],
+          status: 'ACTION_REQUIRED' as CaseStatus
+        };
+        setFetchedSubmission(updatedSubmission);
+        await updateRemoteHistory(activeSubmission, newMessage);
+      }
+    } catch (err) {
+      console.error("Error sending reply:", err);
+      alert("Failed to send message.");
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -341,20 +371,63 @@ export const StatusCheck: React.FC<StatusCheckProps> = ({ submissions, onReply, 
 
              {/* Reply Area */}
              <div className="p-4 bg-white border-t border-slate-200">
+               {/* File Preview */}
+               {file && (
+                 <div className="flex items-center justify-between p-2 mb-3 bg-slate-50 border border-slate-200 rounded-lg max-w-md">
+                   <div className="flex items-center space-x-3 overflow-hidden">
+                     {file.mimeType.includes('pdf') ? (
+                       <FileText className="w-4 h-4 text-slate-500 flex-shrink-0" />
+                     ) : (
+                       <ImageIcon className="w-4 h-4 text-slate-500 flex-shrink-0" />
+                     )}
+                     <span className="text-xs text-slate-900 font-medium truncate">{file.name}</span>
+                   </div>
+                   <button
+                     type="button"
+                     onClick={clearFile}
+                     className="p-1 hover:bg-slate-200 rounded-full text-slate-400 hover:text-slate-700 transition-colors"
+                   >
+                     <X className="w-3 h-3" />
+                   </button>
+                 </div>
+               )}
+
                <form onSubmit={handleSendReply} className="flex gap-3">
+                 <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    className="hidden" 
+                    onChange={handleFileChange} 
+                    accept="image/*,application/pdf"
+                 />
+                 <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isSending}
+                    className="p-2 text-slate-500 hover:text-emerald-600 hover:bg-slate-100 rounded-lg transition-colors border border-transparent hover:border-slate-200"
+                    title="Attach file"
+                 >
+                    <Paperclip className="w-5 h-5" />
+                 </button>
+
                  <input
                    type="text"
                    value={replyText}
                    onChange={(e) => setReplyText(e.target.value)}
                    placeholder="Type your reply..."
-                   className="flex-1 px-4 py-2 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                   disabled={isSending}
+                   className="flex-1 px-4 py-2 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-slate-50"
                  />
                  <button 
                   type="submit"
-                  disabled={!replyText.trim()}
-                  className="bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white px-4 py-2 rounded-lg transition-colors flex items-center shadow-sm"
+                  disabled={isSending || (!replyText.trim() && !file)}
+                  className="bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg transition-colors flex items-center shadow-sm min-w-[3rem] justify-center"
                  >
-                   <SendHorizontal className="w-4 h-4" />
+                   {isSending ? (
+                     <Loader2 className="w-4 h-4 animate-spin" />
+                   ) : (
+                     <SendHorizontal className="w-4 h-4" />
+                   )}
                  </button>
                </form>
              </div>

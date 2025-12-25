@@ -7,7 +7,7 @@ import { LoginScreen } from '../components/LoginScreen';
 import { StatusCheck } from '../components/StatusCheck';
 import { SubmissionResponse, View, CaseStatus } from '../types';
 import { LayoutGrid, MessageSquarePlus, LogOut, SearchCheck, Loader2, DatabaseZap, Shield } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
 
 export default function Home() {
   const [view, setView] = useState<View>(View.FORM);
@@ -15,38 +15,22 @@ export default function Home() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [tenantId, setTenantId] = useState<string | null>(null);
-  const [dbError, setDbError] = useState<string | null>(null);
 
   // Initialize Tenant and Fetch Data
   useEffect(() => {
     const initData = async () => {
       setIsLoading(true);
-      setDbError(null);
       try {
-        // 1. Get Tenant (use the first one found)
-        const { data: tenants, error: tenantError } = await supabase
-          .from('tenants')
-          .select('id')
-          .limit(1);
-        
-        if (tenantError) {
-          // If the table doesn't exist or RLS blocks it, or connection fails
-          console.error('Supabase Tenant Error:', tenantError.message, tenantError.details);
-          setDbError(tenantError.message);
-        } else {
-          const currentTenantId = tenants?.[0]?.id;
-          setTenantId(currentTenantId);
+        // 1. Get Tenant
+        const tenant = await api.tenants.get();
+        setTenantId(tenant.id);
 
-          if (currentTenantId) {
-            // 2. Fetch Reports
-            await fetchReports(currentTenantId);
-          } else {
-            console.warn("No tenants found in database. Please create a tenant record.");
-          }
+        if (tenant.id) {
+          // 2. Fetch Reports
+          await fetchReports(tenant.id);
         }
       } catch (error: any) {
         console.error('Initialization Exception:', error);
-        setDbError(error?.message || 'Unknown initialization error');
       } finally {
         setIsLoading(false);
       }
@@ -56,63 +40,52 @@ export default function Home() {
   }, []);
 
   const fetchReports = async (tId: string) => {
-    const { data, error } = await supabase
-      .from('reports')
-      .select('*')
-      .eq('tenant_id', tId)
-      .order('created_at', { ascending: false });
+    try {
+      const data = await api.reports.list(tId);
+      
+      // Map API data to SubmissionResponse
+      const mappedSubmissions: SubmissionResponse[] = (data || []).map((report: any) => {
+        let richData: any = {};
+        try {
+          richData = report.description; // In our new stack, this comes as JSON object already if mocked, or string if raw
+          if (typeof richData === 'string') richData = JSON.parse(richData);
+        } catch (e) {
+          richData = { 
+            original_message: typeof report.description === 'string' ? report.description : '',
+            history: [] 
+          };
+        }
 
-    if (error) {
-      console.error('Error fetching reports:', error.message);
-      return;
-    }
-
-    // Map Supabase 'reports' to 'SubmissionResponse'
-    // We store rich data (history, content, analysis extras) as JSON string in 'description'
-    const mappedSubmissions: SubmissionResponse[] = (data || []).map((report: any) => {
-      let richData: any = {};
-      try {
-        richData = JSON.parse(report.description || '{}');
-      } catch (e) {
-        // Fallback if description is just text
-        richData = { 
-          original_message: report.description,
-          history: [] 
+        return {
+          submission_id: report.reportKey,
+          access_password: report.passwordHash,
+          content: {
+            subject_line: richData.subject_line || 'Untitled Report',
+            original_message: richData.original_message || '',
+            summary: richData.summary || 'No summary available.',
+            topics: richData.topics || []
+          },
+          analysis: {
+            intent: report.category as any,
+            priority: report.priority as any,
+            sentiment_score: richData.sentiment_score || 0,
+            requires_developer_intervention: richData.requires_developer_intervention || false
+          },
+          admin_preview: richData.admin_preview || '',
+          timestamp: report.createdAt,
+          status: report.status as CaseStatus,
+          history: richData.history || []
         };
-      }
+      });
 
-      return {
-        submission_id: report.report_key,
-        access_password: report.password_hash,
-        content: {
-          subject_line: richData.subject_line || 'Untitled Report',
-          original_message: richData.original_message || '',
-          summary: richData.summary || 'No summary available.',
-          topics: richData.topics || []
-        },
-        analysis: {
-          intent: report.category as any,
-          priority: report.priority as any,
-          sentiment_score: richData.sentiment_score || 0,
-          requires_developer_intervention: richData.requires_developer_intervention || false
-        },
-        admin_preview: richData.admin_preview || '',
-        timestamp: report.created_at,
-        status: report.status as CaseStatus,
-        history: richData.history || []
-      };
-    });
-
-    setSubmissions(mappedSubmissions);
+      setSubmissions(mappedSubmissions);
+    } catch (error) {
+      console.error('Error fetching reports:', error);
+    }
   };
 
   const handleSubmission = async (data: SubmissionResponse) => {
-    // If no tenantId is available (offline mode), we store in local state only
-    if (!tenantId) {
-      console.warn("Offline Mode: Database unavailable. Submission stored locally.");
-      setSubmissions(prev => [data, ...prev]);
-      return;
-    }
+    if (!tenantId) return;
 
     // Prepare JSON blob for description column
     const richData = {
@@ -126,31 +99,36 @@ export default function Home() {
       history: data.history
     };
 
-    const { error } = await supabase.from('reports').insert({
-      tenant_id: tenantId,
-      report_key: data.submission_id,
-      password_hash: data.access_password, // In a real app, hash this!
-      category: data.analysis.intent,
-      priority: data.analysis.priority,
-      status: data.status,
-      description: JSON.stringify(richData),
-      is_encrypted: false, // Defaulting for now
-      created_at: new Date().toISOString()
-    });
+    try {
+        await api.reports.create({
+          tenantId: tenantId,
+          reportKey: data.submission_id,
+          passwordHash: data.access_password,
+          category: data.analysis.intent,
+          priority: data.analysis.priority,
+          status: data.status,
+          description: richData, // Drizzle/Postgres handles JSONB
+          isEncrypted: false,
+        });
+        
+        // Optimistic update
+        setSubmissions(prev => [data, ...prev]);
 
-    if (error) {
-      console.error("Error saving submission:", error);
-      // Fallback: Show in UI anyway so user doesn't think it failed completely
-      setSubmissions(prev => [data, ...prev]);
-      alert(`Note: Submission processed but could not be saved to the database. Error: ${error.message}`);
-    } else {
-      // Optimistic update
-      setSubmissions(prev => [data, ...prev]);
+    } catch (error: any) {
+        console.error("Error saving submission:", error);
+        alert(`Note: Error processing submission: ${error.message}`);
     }
   };
 
-  const updateReportHistory = async (submissionId: string, newMessage: any, newStatus?: string) => {
-    // Update local state first (optimistic)
+  const handleReply = async (submissionId: string, message: string, newStatus?: CaseStatus) => {
+    const newMessage = {
+      id: Math.random().toString(36).substr(2, 9),
+      sender: 'ADMIN',
+      message: message,
+      timestamp: new Date().toISOString()
+    };
+
+    // Optimistic Update
     const updatedHistory = submissions.find(s => s.submission_id === submissionId)?.history 
       ? [...(submissions.find(s => s.submission_id === submissionId)?.history || []), newMessage]
       : [newMessage];
@@ -166,12 +144,10 @@ export default function Home() {
       return sub;
     }));
 
-    if (!tenantId) return;
-
+    // API Call
     const submission = submissions.find(s => s.submission_id === submissionId);
     if (!submission) return;
 
-    // Re-pack rich data
     const richData = {
       subject_line: submission.content.subject_line,
       original_message: submission.content.original_message,
@@ -183,39 +159,34 @@ export default function Home() {
       history: updatedHistory
     };
 
-    const updatePayload: any = {
-      description: JSON.stringify(richData)
-    };
-    if (newStatus) updatePayload.status = newStatus;
-
-    const { error } = await supabase
-      .from('reports')
-      .update(updatePayload)
-      .eq('report_key', submissionId);
-
-    if (error) {
-      console.error("Error updating report in DB:", error);
+    try {
+        const updatePayload: any = { description: richData };
+        if (newStatus) updatePayload.status = newStatus;
+        await api.reports.update(submissionId, updatePayload);
+    } catch (error) {
+        console.error("Error updating report:", error);
     }
   };
 
-  const handleReply = (submissionId: string, message: string, newStatus?: CaseStatus) => {
-    const newMessage = {
-      id: Math.random().toString(36).substr(2, 9),
-      sender: 'ADMIN',
-      message: message,
-      timestamp: new Date().toISOString()
-    };
-    updateReportHistory(submissionId, newMessage, newStatus || 'IN_REVIEW');
-  };
-
-  const handleUserReply = (submissionId: string, message: string) => {
+  const handleUserReply = async (submissionId: string, message: string) => {
     const newMessage = {
       id: Math.random().toString(36).substr(2, 9),
       sender: 'USER',
       message: message,
       timestamp: new Date().toISOString()
     };
-    updateReportHistory(submissionId, newMessage, 'ACTION_REQUIRED');
+    
+    // Logic handled inside StatusCheck primarily, but updating root state here too
+    setSubmissions(prev => prev.map(sub => {
+        if (sub.submission_id === submissionId) {
+            return {
+                ...sub,
+                status: 'ACTION_REQUIRED',
+                history: [...sub.history, newMessage]
+            };
+        }
+        return sub;
+    }));
   };
 
   const handleLogout = () => {
@@ -228,7 +199,7 @@ export default function Home() {
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="flex flex-col items-center">
           <Loader2 className="w-8 h-8 text-emerald-600 animate-spin mb-4" />
-          <p className="text-slate-500 font-medium">Connecting to TellSecure...</p>
+          <p className="text-slate-500 font-medium">Connecting to Secure Stack...</p>
         </div>
       </div>
     );
@@ -309,14 +280,6 @@ export default function Home() {
 
       {/* Main Content */}
       <main className="flex-1 relative">
-        {/* Database Warning Banner */}
-        {dbError && (
-          <div className="bg-amber-50 border-b border-amber-100 px-4 py-2 flex items-center justify-center text-sm text-amber-800">
-             <DatabaseZap className="w-4 h-4 mr-2" />
-             <span>Database Connection Issue: {dbError} (Running in Offline Mode - data will not save)</span>
-          </div>
-        )}
-
         {view === View.FORM && (
           <div className="relative min-h-[calc(100vh-64px)] bg-slate-900 overflow-hidden">
              {/* Abstract Background Decoration */}
