@@ -1,20 +1,52 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# 🛡️ TellSecure
 
-# Run and deploy your AI Studio app
+**The Sovereign Whistleblowing Platform for the DACH Market.**
+TellSecure is a privacy-first B2B SaaS designed to help SMBs comply with the German Whistleblower Protection Act (HinSchG) without compromising data sovereignty.
 
-This contains everything you need to run your app locally.
+![Status](https://img.shields.io/badge/Status-Prototype-emerald) ![Stack](https://img.shields.io/badge/Stack-Sovereign-blue)
 
-View your app in AI Studio: https://ai.studio/apps/drive/1aImpkxwJjxDZFATeZomP3k_E-oBD0THs
+## 🚀 The Concept: "Sovereign Tech"
 
-## Run Locally
+Most compliance tools rely on US-based cloud providers (AWS/Azure) or external AI APIs (OpenAI). TellSecure takes a different approach: **Total Data Sovereignty.**
 
-**Prerequisites:**  Node.js
+* **Hosting:** Self-hosted on Hetzner Cloud (Nuremberg/Falkenstein).
+* **AI:** Local LLM inference (Llama 3 via Ollama) for risk analysis and translation. No data ever leaves the server.
+* **Storage:** Self-hosted S3 (Garage) for encrypted evidence storage.
 
+## 🛠️ The "Raw" Tech Stack
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+Built for performance, control, and zero vendor lock-in.
+
+* **Framework:** [Next.js 14](https://nextjs.org/) (App Router, Server Actions)
+* **Database:** [PostgreSQL](https://www.postgresql.org/) managed via [Coolify](https://coolify.io/)
+* **ORM:** [Drizzle ORM](https://orm.drizzle.team/) (Type-safe, lightweight)
+* **Auth:** [Auth.js v5](https://authjs.dev/) (Self-hosted sessions)
+* **Storage:** [Garage](https://garagehq.deuxfleurs.fr/) (S3-compatible object store)
+* **AI Engine:** [Ollama](https://ollama.com/) running Llama 3 (8B)
+* **Styling:** Tailwind CSS + shadcn/ui
+
+## ⚡ Key Features
+
+1.  **Multi-Tenancy:** Secure data isolation for multiple corporate clients using tenant-based schemas.
+2.  **Anonymous Reporting:** End-to-end encrypted communication channel for whistleblowers.
+3.  **Local AI Analyst:**
+    * Auto-translation of reports (e.g., Polish -> German).
+    * Risk classification (Low/Medium/High) without sending data to OpenAI.
+4.  **Async Processing:** Cron-based background workers for heavy AI tasks to keep the UI snappy.
+
+## 🏗️ Architecture
+
+```mermaid
+graph TD
+    User[User / Whistleblower] -->|HTTPS| Traefik[Traefik Proxy]
+    Traefik --> Next[Next.js App]
+    Next -->|SQL| DB[(Postgres)]
+    Next -->|S3 API| Garage[(Garage Storage)]
+    Next -->|Internal API| Ollama[Ollama AI]
+    
+    subgraph Hetzner VPS [Coolify Host]
+    Next
+    DB
+    Garage
+    Ollama
+    end
