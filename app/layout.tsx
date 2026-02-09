@@ -1,7 +1,7 @@
 import React from 'react';
 
 export const metadata = {
-  title: 'TellSecure - Enterprise Whistleblowing',
+  title: 'ComplyBox - Enterprise Whistleblowing',
   description: 'A high-trust, anonymous whistleblower platform for enterprise compliance and safety.',
 };
 
@@ -15,7 +15,8 @@ export default function RootLayout({
       <head>
         <script src="https://cdn.tailwindcss.com"></script>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-        <style dangerouslySetInnerHTML={{ __html: `
+        <style dangerouslySetInnerHTML={{
+          __html: `
           body { font-family: 'Inter', sans-serif; }
           /* Custom scrollbar for dashboard */
           ::-webkit-scrollbar {

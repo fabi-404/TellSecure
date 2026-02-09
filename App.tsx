@@ -40,16 +40,16 @@ const App: React.FC = () => {
   const fetchReports = async (tId: string) => {
     try {
       const data = await api.reports.list(tId);
-      
+
       const mappedSubmissions: SubmissionResponse[] = (data || []).map((report: any) => {
         let richData: any = {};
         try {
           richData = report.description;
           if (typeof richData === 'string') richData = JSON.parse(richData);
         } catch (e) {
-          richData = { 
+          richData = {
             original_message: typeof report.description === 'string' ? report.description : '',
-            history: [] 
+            history: []
           };
         }
 
@@ -96,21 +96,21 @@ const App: React.FC = () => {
     };
 
     try {
-        await api.reports.create({
-          tenantId: tenantId,
-          reportKey: data.submission_id,
-          passwordHash: data.access_password,
-          category: data.analysis.intent,
-          priority: data.analysis.priority,
-          status: data.status,
-          description: richData, 
-          isEncrypted: false,
-        });
-        
-        // Optimistic update
-        setSubmissions(prev => [data, ...prev]);
+      await api.reports.create({
+        tenantId: tenantId,
+        reportKey: data.submission_id,
+        passwordHash: data.access_password,
+        category: data.analysis.intent,
+        priority: data.analysis.priority,
+        status: data.status,
+        description: richData,
+        isEncrypted: false,
+      });
+
+      // Optimistic update
+      setSubmissions(prev => [data, ...prev]);
     } catch (error: any) {
-        console.error("Error saving submission:", error);
+      console.error("Error saving submission:", error);
     }
   };
 
@@ -121,9 +121,9 @@ const App: React.FC = () => {
       message: message,
       timestamp: new Date().toISOString()
     };
-    
+
     // Update local state first (optimistic)
-    const updatedHistory = submissions.find(s => s.submission_id === submissionId)?.history 
+    const updatedHistory = submissions.find(s => s.submission_id === submissionId)?.history
       ? [...(submissions.find(s => s.submission_id === submissionId)?.history || []), newMessage]
       : [newMessage];
 
@@ -156,11 +156,11 @@ const App: React.FC = () => {
     };
 
     try {
-        const updatePayload: any = { description: richData };
-        if (newStatus) updatePayload.status = newStatus;
-        await api.reports.update(submissionId, updatePayload);
+      const updatePayload: any = { description: richData };
+      if (newStatus) updatePayload.status = newStatus;
+      await api.reports.update(submissionId, updatePayload);
     } catch (error) {
-        console.error("Error updating report in DB:", error);
+      console.error("Error updating report in DB:", error);
     }
   };
 
@@ -171,17 +171,17 @@ const App: React.FC = () => {
       message: message,
       timestamp: new Date().toISOString()
     };
-    
+
     // This mostly triggers the optimistic UI update in the parent
     setSubmissions(prev => prev.map(sub => {
-        if (sub.submission_id === submissionId) {
-            return {
-                ...sub,
-                status: 'ACTION_REQUIRED',
-                history: [...sub.history, newMessage]
-            };
-        }
-        return sub;
+      if (sub.submission_id === submissionId) {
+        return {
+          ...sub,
+          status: 'ACTION_REQUIRED',
+          history: [...sub.history, newMessage]
+        };
+      }
+      return sub;
     }));
   };
 
@@ -195,7 +195,7 @@ const App: React.FC = () => {
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="flex flex-col items-center">
           <Loader2 className="w-8 h-8 text-emerald-600 animate-spin mb-4" />
-          <p className="text-slate-500 font-medium">Connecting to TellSecure...</p>
+          <p className="text-slate-500 font-medium">Connecting to ComplyBox...</p>
         </div>
       </div>
     );
@@ -210,20 +210,19 @@ const App: React.FC = () => {
             <div className="flex items-center">
               <div className="flex-shrink-0 flex items-center cursor-pointer" onClick={() => setView(View.FORM)}>
                 <div className="w-8 h-8 bg-slate-900 rounded-lg flex items-center justify-center mr-3">
-                    <Shield className="w-5 h-5 text-emerald-400" />
+                  <Shield className="w-5 h-5 text-emerald-400" />
                 </div>
-                <span className="font-bold text-xl tracking-tight text-slate-900">TellSecure</span>
+                <span className="font-bold text-xl tracking-tight text-slate-900">ComplyBox</span>
               </div>
             </div>
-            
+
             <div className="flex items-center space-x-2 sm:space-x-4">
               <button
                 onClick={() => setView(View.FORM)}
-                className={`flex items-center px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                  view === View.FORM 
-                    ? 'bg-slate-900 text-white shadow-sm' 
+                className={`flex items-center px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${view === View.FORM
+                    ? 'bg-slate-900 text-white shadow-sm'
                     : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                }`}
+                  }`}
               >
                 <MessageSquarePlus className="w-4 h-4 mr-2 hidden sm:block" />
                 Report
@@ -231,25 +230,23 @@ const App: React.FC = () => {
 
               <button
                 onClick={() => setView(View.CHECK_STATUS)}
-                className={`flex items-center px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                  view === View.CHECK_STATUS 
-                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' 
+                className={`flex items-center px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${view === View.CHECK_STATUS
+                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
                     : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                }`}
+                  }`}
               >
                 <SearchCheck className="w-4 h-4 mr-2 hidden sm:block" />
                 Track Case
               </button>
-              
+
               <div className="h-6 w-px bg-slate-200 mx-2"></div>
-              
+
               <button
                 onClick={() => setView(View.DASHBOARD)}
-                className={`flex items-center px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                  view === View.DASHBOARD 
-                    ? 'bg-slate-100 text-slate-900 border border-slate-200' 
+                className={`flex items-center px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${view === View.DASHBOARD
+                    ? 'bg-slate-100 text-slate-900 border border-slate-200'
                     : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                }`}
+                  }`}
               >
                 <LayoutGrid className="w-4 h-4 mr-2 hidden sm:block" />
                 Admin Dashboard
@@ -278,30 +275,30 @@ const App: React.FC = () => {
       <main className="flex-1 relative">
         {view === View.FORM && (
           <div className="relative min-h-[calc(100vh-64px)] bg-slate-900 overflow-hidden">
-             {/* Abstract Background Decoration */}
-             <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0">
-               <div className="absolute -top-[30%] -left-[10%] w-[70%] h-[70%] bg-emerald-900/20 rounded-full blur-3xl"></div>
-               <div className="absolute top-[20%] right-[10%] w-[40%] h-[40%] bg-blue-900/20 rounded-full blur-3xl"></div>
-             </div>
-             
-             <div className="relative z-10 w-full py-16 px-4 sm:px-6 lg:px-8 flex flex-col items-center">
-                <div className="text-center mb-10 max-w-2xl">
-                  <h1 className="text-4xl font-bold text-white sm:text-5xl tracking-tight mb-4">
-                    Speak Up. Stay Secure.
-                  </h1>
-                  <p className="text-lg text-slate-400">
-                    Enterprise-grade whistleblower channel. 
-                    <span className="text-emerald-400 font-medium"> Zero-knowledge identity protection</span> ensures your voice is heard without compromise.
-                  </p>
-                </div>
-                <ContactForm onSubmissionComplete={handleSubmission} />
-             </div>
+            {/* Abstract Background Decoration */}
+            <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0">
+              <div className="absolute -top-[30%] -left-[10%] w-[70%] h-[70%] bg-emerald-900/20 rounded-full blur-3xl"></div>
+              <div className="absolute top-[20%] right-[10%] w-[40%] h-[40%] bg-blue-900/20 rounded-full blur-3xl"></div>
+            </div>
+
+            <div className="relative z-10 w-full py-16 px-4 sm:px-6 lg:px-8 flex flex-col items-center">
+              <div className="text-center mb-10 max-w-2xl">
+                <h1 className="text-4xl font-bold text-white sm:text-5xl tracking-tight mb-4">
+                  Speak Up. Stay Secure.
+                </h1>
+                <p className="text-lg text-slate-400">
+                  Enterprise-grade whistleblower channel.
+                  <span className="text-emerald-400 font-medium"> Zero-knowledge identity protection</span> ensures your voice is heard without compromise.
+                </p>
+              </div>
+              <ContactForm onSubmissionComplete={handleSubmission} />
+            </div>
           </div>
         )}
-        
+
         {view === View.CHECK_STATUS && (
-          <StatusCheck 
-            submissions={submissions} 
+          <StatusCheck
+            submissions={submissions}
             onReply={handleUserReply}
             tenantId={tenantId}
           />
@@ -310,8 +307,8 @@ const App: React.FC = () => {
         {view === View.DASHBOARD && (
           <>
             {isAuthenticated ? (
-              <Dashboard 
-                submissions={submissions} 
+              <Dashboard
+                submissions={submissions}
                 onReply={handleReply}
               />
             ) : (

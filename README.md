@@ -1,13 +1,13 @@
-# 🛡️ TellSecure
+# 🛡️ ComplyBox
 
 **The Sovereign Whistleblowing Platform for the DACH Market.**
-TellSecure is a privacy-first B2B SaaS designed to help SMBs comply with the German Whistleblower Protection Act (HinSchG) without compromising data sovereignty.
+ComplyBox is a privacy-first B2B SaaS designed to help SMBs comply with the German Whistleblower Protection Act (HinSchG) without compromising data sovereignty.
 
 ![Status](https://img.shields.io/badge/Status-Prototype-emerald) ![Stack](https://img.shields.io/badge/Stack-Sovereign-blue)
 
 ## 🚀 The Concept: "Sovereign Tech"
 
-Most compliance tools rely on US-based cloud providers (AWS/Azure) or external AI APIs (OpenAI). TellSecure takes a different approach: **Total Data Sovereignty.**
+Most compliance tools rely on US-based cloud providers (AWS/Azure) or external AI APIs (OpenAI). ComplyBox takes a different approach: **Total Data Sovereignty.**
 
 * **Hosting:** Self-hosted on Hetzner Cloud (Nuremberg/Falkenstein).
 * **AI:** Local LLM inference (Llama 3 via Ollama) for risk analysis and translation. No data ever leaves the server.

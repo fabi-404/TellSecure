@@ -27,16 +27,16 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
           <div className="w-16 h-16 bg-slate-800 rounded-lg flex items-center justify-center mx-auto mb-4 border border-slate-700">
             <Shield className="w-8 h-8 text-emerald-400" />
           </div>
-          <h2 className="text-2xl font-bold text-white tracking-tight">TellSecure Admin</h2>
+          <h2 className="text-2xl font-bold text-white tracking-tight">ComplyBox Admin</h2>
           <p className="text-slate-400 mt-2 text-sm">Restricted access environment.</p>
         </div>
-        
+
         <div className="p-8">
           <form onSubmit={handleLogin} className="space-y-6">
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-2">Security Key</label>
-              <input 
-                type="password" 
+              <input
+                type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors outline-none"
@@ -44,7 +44,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
                 autoFocus
               />
             </div>
-            
+
             {error && (
               <div className="flex items-center text-red-600 text-sm bg-red-50 p-3 rounded-lg animate-pulse border border-red-100">
                 <ShieldAlert className="w-4 h-4 mr-2" />
@@ -52,14 +52,14 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
               </div>
             )}
 
-            <button 
+            <button
               type="submit"
               className="w-full flex items-center justify-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 shadow-sm"
             >
               <span>Authenticate</span>
               <ArrowRight className="w-4 h-4" />
             </button>
-            
+
             <p className="text-center text-xs text-slate-400 mt-4">
               Demo access: <code className="bg-slate-100 px-2 py-0.5 rounded text-slate-600 border border-slate-200">admin123</code>
             </p>
